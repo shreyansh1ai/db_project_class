@@ -1,0 +1,85 @@
+use ecommerce
+
+db.users.insertMany([
+  { _id: 1, name: "Asha Verma", email: "asha@example.com", phone: "9876543210", city: "Lucknow", createdAt: new Date() },
+  { _id: 2, name: "Ravi Singh", email: "ravi@example.com", phone: "9123456780", city: "Delhi", createdAt: new Date() },
+  { _id: 3, name: "Neha Gupta", email: "neha@example.com", phone: "9988776655", city: "Kanpur", createdAt: new Date() }
+])
+
+db.categories.insertMany([
+  { _id: 1, name: "Electronics" },
+  { _id: 2, name: "Clothing" },
+  { _id: 3, name: "Books" }
+])
+
+db.products.insertMany([
+  { _id: 101, name: "Wireless Mouse", categoryId: 1, price: 599, stock: 50, tags: ["computer", "accessory"] },
+  { _id: 102, name: "Bluetooth Headphones", categoryId: 1, price: 1999, stock: 30, tags: ["audio"] },
+  { _id: 103, name: "Cotton T-Shirt", categoryId: 2, price: 499, stock: 100, tags: ["men", "summer"] },
+  { _id: 104, name: "JavaScript Book", categoryId: 3, price: 350, stock: 20, tags: ["programming"] }
+])
+
+db.orders.insertMany([
+  {
+    _id: 1001,
+    userId: 1,
+    items: [
+      { productId: 101, qty: 2, price: 599 },
+      { productId: 104, qty: 1, price: 350 }
+    ],
+    total: 1548,
+    status: "pending",
+    orderDate: new Date()
+  },
+  {
+    _id: 1002,
+    userId: 2,
+    items: [{ productId: 102, qty: 1, price: 1999 }],
+    total: 1999,
+    status: "delivered",
+    orderDate: new Date()
+  },
+  {
+    _id: 1003,
+    userId: 3,
+    items: [{ productId: 103, qty: 3, price: 499 }],
+    total: 1497,
+    status: "shipped",
+    orderDate: new Date()
+  }
+])
+
+db.users.createIndex({ email: 1 }, { unique: true })
+db.products.createIndex({ categoryId: 1 })
+db.orders.createIndex({ userId: 1 })
+
+db.products.find({ price: { $lt: 1000 } })
+db.products.find({ categoryId: 1 }).sort({ price: -1 })
+db.orders.find({ status: "pending" })
+db.orders.find({ userId: 1 })
+
+db.orders.updateOne({ _id: 1001 }, { $set: { status: "shipped" } })
+db.products.updateOne({ _id: 101 }, { $inc: { stock: -2 } })
+db.users.updateOne({ _id: 1 }, { $set: { city: "Delhi" } })
+
+db.orders.deleteOne({ _id: 1003 })
+db.products.deleteMany({ stock: 0 })
+
+db.orders.aggregate([
+  { $lookup: { from: "users", localField: "userId", foreignField: "_id", as: "user" } },
+  { $unwind: "$user" },
+  { $project: { _id: 1, "user.name": 1, total: 1, status: 1 } }
+])
+
+db.orders.aggregate([
+  { $group: { _id: "$status", count: { $sum: 1 }, revenue: { $sum: "$total" } } }
+])
+
+db.orders.aggregate([
+  { $unwind: "$items" },
+  { $group: { _id: "$items.productId", totalSold: { $sum: "$items.qty" } } },
+  { $sort: { totalSold: -1 } }
+])
+
+db.orders.aggregate([
+  { $group: { _id: "$userId",
